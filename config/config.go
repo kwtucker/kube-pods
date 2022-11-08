@@ -10,11 +10,13 @@ import (
 type Flags struct {
 	DryRun  bool
 	Verbose bool
+	Info    bool
 }
 
 type Config struct {
 	DryRun  bool `json:"-"`
 	Verbose bool `json:"-"`
+	Info    bool `json:"-"`
 }
 
 func LoadConfig(flags Flags) *Config {
@@ -22,6 +24,7 @@ func LoadConfig(flags Flags) *Config {
 	cfg := &Config{
 		DryRun:  flags.DryRun,
 		Verbose: flags.Verbose,
+		Info:    flags.Info,
 	}
 
 	cfg.FillEnvs(".")

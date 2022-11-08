@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/kwtucker/kube-pods/config"
 	"github.com/kwtucker/reef/kube"
@@ -12,11 +14,13 @@ import (
 var (
 	DryRun  bool
 	Verbose bool
+	Info    bool
 )
 
 func init() {
 	RootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "n", false, "Dry run to inspect the result")
 	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Verbose. To list full objects and data.")
+	RootCmd.PersistentFlags().BoolVarP(&Info, "info", "", false, "Info. information about the pod.`")
 }
 
 var RootCmd = &cobra.Command{
@@ -27,6 +31,7 @@ var RootCmd = &cobra.Command{
 		cfg := config.LoadConfig(config.Flags{
 			DryRun:  DryRun,
 			Verbose: Verbose,
+			Info:    Info,
 		})
 
 		client, err := kube.NewClient(context.Background(), "")
@@ -35,19 +40,31 @@ var RootCmd = &cobra.Command{
 			return
 		}
 
-		if len(args) < 1 {
-			for _, name := range args {
-				p, err := client.Pod(name)
-				if err != nil {
-					fmt.Printf("%+v", err)
-					return
-				}
+		podInfos := []kube.PodInfo{}
 
-				fmt.Printf("%+v\n", p.Info())
-			}
+		if len(args) < 1 {
+			fmt.Fprint(os.Stderr, cmd.Help())
+			return
 		}
 
-		fmt.Println(cfg)
+		for _, name := range args {
+			p, err := client.Pod(name)
+			if err != nil {
+				fmt.Fprint(os.Stderr, err)
+				return
+			}
 
+			podInfos = append(podInfos, p.Info())
+		}
+
+		if cfg.Info {
+			byt, err := json.Marshal(podInfos)
+			if err != nil {
+				fmt.Fprint(os.Stderr, err)
+				return
+			}
+
+			fmt.Fprint(os.Stdout, "", string(byt))
+		}
 	},
 }
